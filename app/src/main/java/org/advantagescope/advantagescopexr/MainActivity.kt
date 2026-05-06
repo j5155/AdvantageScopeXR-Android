@@ -1,7 +1,9 @@
 package org.advantagescope.advantagescopexr
 
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
@@ -101,29 +103,18 @@ class MainActivity : ComponentActivity() {
     }
 
 
-    val client = HttpClient()
-
-
-
     fun startFromUrl(url: String) {
-        val upstream = url.removeSuffix(":$UPSTREAM_PORT")
-
-        // yes, this is easier than using the android service communication api
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            client.post(LOCAL_URL) {
-                url {
-                    appendPathSegments("setupstream")
-                }
-                setBody(upstream)
-            }
-            if (mSession != null) {
-                val intent = TrustedWebActivityIntentBuilder(LOCAL_URI).build(mSession!!).intent
-                startActivity(intent)
-            } else { // no custom tabs support, open in browser
-                val intent = Intent(Intent.ACTION_VIEW,LOCAL_URI)
-                startActivity(intent)
-            }
+        upstream = url.removeSuffix(":$UPSTREAM_PORT").removePrefix("http://")
+        while (!ready) {
+            Thread.sleep(250)
+        }
+        // todo for some reason it shows an error page for half a second but then it works
+        if (mSession != null) {
+            val intent = TrustedWebActivityIntentBuilder(LOCAL_URI).build(mSession!!).intent
+            startActivity(intent)
+        } else { // no custom tabs support, open in browser
+            val intent = Intent(Intent.ACTION_VIEW, LOCAL_URI)
+            startActivity(intent)
         }
     }
 
@@ -131,18 +122,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // if app is too old to support accessing the real fingerprint, here's some random default so nothing gets mad that it's missing
-        var fingerprint = "F6:F0:1F:2D:E9:B6:3C:6E:1A:B3:A3:E5:56:C2:4E:B4:A4:AC:43:26:71:BF:DE:34:C6:36:A3:A4:B1:ED:B5:C4"
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             fingerprint = getFingerprint()
         }
 
 
         val proxyIntent = Intent(this, ProxyService::class.java)
-        proxyIntent.putExtra("fingerprint", fingerprint)
-
+        stopService(proxyIntent)
         startService(proxyIntent)
+
+
+
+
 
 
 
@@ -160,15 +151,15 @@ class MainActivity : ComponentActivity() {
                             // https://stackoverflow.com/questions/76075230/how-to-fix-google-code-scanner-throwing-mlkitexception-failed-to-scan-code
                             // stopping here 5/5/25
                             scanner.startScan().addOnSuccessListener {
-                            println("12087 scan success")
-                            startFromUrl(it.url!!.url!!)
-                        }.addOnFailureListener {
-                            it.printStackTrace()
-                            println("12087 scan fail")
-                        }.addOnCanceledListener {
-                            println("12087 scan cancel")
-                        }
-                                  },
+                                println("12087 scan success")
+                                startFromUrl(it.url!!.url!!)
+                            }.addOnFailureListener {
+                                it.printStackTrace()
+                                println("12087 scan fail")
+                            }.addOnCanceledListener {
+                                println("12087 scan cancel")
+                            }
+                        },
                         content = {
                             Text(
                                 text = "Scan"
@@ -182,6 +173,12 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+
+        if (intent != null) {
+            val url = intent.data?.getQueryParameter("url")
+
+            if (url != null) startFromUrl(url)
         }
 
     }

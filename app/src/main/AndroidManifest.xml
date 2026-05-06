@@ -21,6 +21,14 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter android:label="AdvantageScope">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Accepts URIs that begin with "example://gizmos” -->
+                <data android:scheme="advantagescope"
+                    android:host="proxy" />
+            </intent-filter>
         </activity>
         <activity
                 android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
