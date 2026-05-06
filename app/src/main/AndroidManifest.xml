@@ -11,6 +11,7 @@
             android:roundIcon="@mipmap/ic_launcher_round"
             android:supportsRtl="true"
             android:theme="@style/Theme.AdvantageScopeXR">
+        <service android:name=".ProxyService" />
         <activity
                 android:name=".MainActivity"
                 android:exported="true"
@@ -22,9 +23,29 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+                android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+                android:exported="true"
+                android:label="@string/app_name"
+                android:theme="@style/Theme.AdvantageScopeXR">
+
+            <!-- Edit android:value to change the url opened by the Trusted Web Activity -->
+            <meta-data
+                    android:name="android.support.customtabs.trusted.DEFAULT_URL"
+                    android:value="http://127.0.0.1:56328" />
+        </activity>
         <meta-data
                 android:name="com.google.mlkit.vision.DEPENDENCIES"
                 android:value="barcode_ui" />
+        <meta-data
+            android:name="asset_statements"
+            android:resource="@string/asset_statements" />
     </application>
+
+    <queries>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
 
 </manifest>
