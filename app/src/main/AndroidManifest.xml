@@ -15,7 +15,6 @@
         <activity
                 android:name=".MainActivity"
                 android:exported="true"
-                android:label="@string/app_name"
                 android:theme="@style/Theme.AdvantageScopeXR">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -26,13 +25,12 @@
         <activity
                 android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
                 android:exported="true"
-                android:label="@string/app_name"
                 android:theme="@style/Theme.AdvantageScopeXR">
 
             <!-- Edit android:value to change the url opened by the Trusted Web Activity -->
             <meta-data
                     android:name="android.support.customtabs.trusted.DEFAULT_URL"
-                    android:value="http://127.0.0.1:56328" />
+                    android:value="http://localhost:56328" />
         </activity>
         <meta-data
                 android:name="com.google.mlkit.vision.DEPENDENCIES"

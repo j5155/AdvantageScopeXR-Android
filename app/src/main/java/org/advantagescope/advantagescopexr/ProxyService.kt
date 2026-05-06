@@ -31,12 +31,19 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.seconds
 
-
+const val UPSTREAM_PORT = 56328
 class ProxyService : Service() {
-    val scope = CoroutineScope(Job() + Dispatchers.Main)
+    var scope: CoroutineScope? = null
+    val client = setupClient()
+    var upstream = ""
 
-    override fun onCreate() {
-        scope.launch {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        scope?.cancel()
+        scope = CoroutineScope(Job() + Dispatchers.Main)
+
+        val fingerprint = intent!!.getStringExtra("fingerprint")!!
+
+        scope!!.launch {
             val server = embeddedServer(Netty, configure = {
                 connectors.add(EngineConnectorBuilder().apply {
                     host = "127.0.0.1"
@@ -44,34 +51,64 @@ class ProxyService : Service() {
                 })
                 enableH2c = true
             }) {
-                configureResources()
-                configureWebsockets()
+                install(Resources)
+                install(WebSockets) {
+                    pingPeriod = 15.seconds
+                    timeout = 15.seconds
+                    maxFrameSize = Long.MAX_VALUE
+                    masking = false
+                }
+                routing {
+                    post("/setupstream") {
+                        upstream = call.receiveText()
+                        call.respondText(upstream, ContentType.Text.Plain)
+                    }
+                    get("/.well-known/assetlinks.json") { // https://developers.google.com/digital-asset-links/v1/getting-started
+                        call.respondText("""
+                            [{
+                              "relation": ["delegate_permission/common.handle_all_urls"],
+                              "target" : { "namespace": "android_app", "package_name": "org.advantagescope.advantagescopexr",
+                                           "sha256_cert_fingerprints": ["$fingerprint"] }
+                            }]""".trimIndent(),
+                            contentType = ContentType.Application.Json,
+                            status = HttpStatusCode.OK
+                        )
+                    }
+                    get("/{...}") {
+                        call.application.environment.log.info("request got ${call.request.uri}")
+                        val upstreamReq = client.get("http://$upstream:$UPSTREAM_PORT${call.request.uri}")
+                        call.respondBytes(upstreamReq.readRawBytes(), upstreamReq.contentType(), upstreamReq.status)
+                    }
+                    webSocket("/ws") { // websocketSession
+                        val upstream = client.webSocketSession(
+                            method = HttpMethod.Get,
+                            host = upstream,
+                            port = UPSTREAM_PORT,
+                            path = "/ws"
+                        )
+                        for (frame in upstream.incoming) {
+                            outgoing.send(frame)
+                        }
+                        for (frame in incoming) {
+                            upstream.outgoing.send(frame)
+                        }
+                    }
+                }
                 configureRouting()
             }
             server.startSuspend(wait = true)
         }
+
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {
-        scope.cancel()
+        scope?.cancel()
     }
 
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
-    }
-}
-
-fun Application.configureResources() {
-    install(Resources)
-}
-
-fun Application.configureWebsockets() {
-    install(WebSockets) {
-        pingPeriod = 15.seconds
-        timeout = 15.seconds
-        maxFrameSize = Long.MAX_VALUE
-        masking = false
     }
 }
 
@@ -81,35 +118,5 @@ fun setupClient(): HttpClient = HttpClient(CIO) {
 }
 
 fun Application.configureRouting() {
-    val client = setupClient()
-    val upstream = "100.107.1.122"
-    val upstreamPort = 56328
-    routing {
-        get ("/hello") {
-            call.respondText("hi")
-        }
-        get("/{...}") {
-            //call.respondText("greetings")
 
-            call.application.environment.log.info("request got ${call.request.uri}")
-            val upstreamReq = client.get("http://$upstream:$upstreamPort${call.request.uri}")
-            call.respondBytes(upstreamReq.readRawBytes(),upstreamReq.contentType(),upstreamReq.status)
-
-
-        }
-        webSocket("/ws") { // websocketSession
-            val upstream = client.webSocketSession(
-                method = HttpMethod.Get,
-                host = upstream,
-                port = upstreamPort,
-                path = "/ws"
-            )
-            for (frame in upstream.incoming) {
-                outgoing.send(frame)
-            }
-            for (frame in incoming) {
-                upstream.outgoing.send(frame)
-            }
-        }
-    }
 }
