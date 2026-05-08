@@ -130,6 +130,7 @@ class MainActivity : ComponentActivity() {
 
         val proxyIntent = Intent(this, ProxyService::class.java)
         stopService(proxyIntent)
+        Thread.sleep(100)
         startService(proxyIntent)
 
 

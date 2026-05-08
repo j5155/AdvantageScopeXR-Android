@@ -121,7 +121,8 @@ class ProxyService : Service() {
     }
 
     override fun onDestroy() {
-        server.stop()
+
+        server.stop(10L,10L)
         scope?.cancel()
         ready =  false
     }
