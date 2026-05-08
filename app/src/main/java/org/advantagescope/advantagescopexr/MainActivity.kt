@@ -35,6 +35,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.appendPathSegments
+import io.ktor.server.util.url
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -179,6 +180,8 @@ class MainActivity : ComponentActivity() {
             val url = intent.data?.getQueryParameter("url")
 
             if (url != null) startFromUrl(url)
+
+
         }
 
     }

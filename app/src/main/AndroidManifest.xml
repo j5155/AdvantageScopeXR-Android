@@ -25,9 +25,8 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Accepts URIs that begin with "example://gizmos” -->
-                <data android:scheme="advantagescope"
-                    android:host="proxy" />
+                <!-- Accepts URIs that begin with "advantagescope://proxy/” -->
+                <data android:scheme="advantagescope" android:host="proxy" android:path="/"/>
             </intent-filter>
         </activity>
         <activity
